@@ -1,0 +1,96 @@
+
+//+------------------------------------------------------------------+
+//|                                            Market Structures MT5 |
+//|                                      Developer: Forex Robot Easy Team |
+//|                                            Website: forexroboteasy.com |
+//+------------------------------------------------------------------+
+#property strict
+
+//+------------------------------------------------------------------+
+//| Custom indicator initialization function                         |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+    //--- indicator buffers mapping
+    IndicatorBuffers(1);
+    //--- drawing settings
+    SetIndexStyle(0, DRAW_ARROW);
+    SetIndexArrow(0, 159);
+    SetIndexBuffer(0, ExtMapBuffer);
+    
+    return(INIT_SUCCEEDED);
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator iteration function                              |
+//+------------------------------------------------------------------+
+int OnCalculate(const int rates_total,
+                const int prev_calculated,
+                const datetime& time[],
+                const double& open[],
+                const double& high[],
+                const double& low[],
+                const double& close[],
+                const long& tick_volume[],
+                const long& volume[],
+                const int& spread[])
+{
+    //--- check for enough data to calculate
+    if(rates_total <= 1)
+        return(0);
+        
+    //--- check for the input parameters
+    int period = 14; // default period value
+    if(InputParameterExists('Period'))
+        period = MathMax(1, MathMin(100, (int)InputGetInteger('Period')));
+    
+    //--- check for the changes in trend structures
+    for(int i = 1; i < rates_total; i++)
+    {
+        double current_peak = high[i];
+        double previous_peak = high[i - 1];
+        double current_bottom = low[i];
+        double previous_bottom = low[i - 1];
+        
+        //--- check for uptrend
+        if(current_peak > previous_peak)
+        {
+            //--- check for the breaking of the last peak
+            bool breaking_peak = true;
+            for(int j = i + 1; j <= i + period; j++)
+            {
+                if(high[j] >= current_peak)
+                {
+                    breaking_peak = false;
+                    break;
+                }
+            }
+            
+            //--- highlight the breaking of the last peak
+            if(breaking_peak)
+                ExtMapBuffer[i] = current_peak;
+        }
+        
+        //--- check for downtrend
+        if(current_bottom < previous_bottom)
+        {
+            //--- check for the breaking of the last bottom
+            bool breaking_bottom = true;
+            for(int j = i + 1; j <= i + period; j++)
+            {
+                if(low[j] <= current_bottom)
+                {
+                    breaking_bottom = false;
+                    break;
+                }
+            }
+            
+            //--- highlight the breaking of the last bottom
+            if(breaking_bottom)
+                ExtMapBuffer[i] = current_bottom;
+        }
+    }
+    
+    //--- return the calculated bars
+    return(rates_total);
+}
